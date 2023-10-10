@@ -45,8 +45,8 @@ const generatePredefined = (config, amount) => {
 }
 
 const generateDate = (config, amount) => {
-  const starDate = config.date[0]
-  const endDate = config.date[1]
+  const starDate = new Date(config.date[0])
+  const endDate = new Date(config.date[1])
   // Verifique se as datas de início e fim são objetos Date válidos.
   if (!(starDate instanceof Date) || !(endDate instanceof Date)) {
     throw new Error("As datas de início e fim devem ser objetos Date válidos.");
@@ -57,15 +57,16 @@ const generateDate = (config, amount) => {
     throw new Error("A data de início deve ser anterior à data de fim.");
   }
 
-  const datasAleatorias = [];
+  const randomDates = [];
 
   for (let i = 0; i < amount; i++) {
-    const timestampAleatorio = starDate.getTime() + Math.random() * (endDate.getTime() - starDate.getTime());
+    const randomTimestamps = starDate.getTime() + Math.random() * (endDate.getTime() - starDate.getTime());
 
-    datasAleatorias.push(new Date(timestampAleatorio));
+    const randomFormatedDate = formatDate(new Date(randomTimestamps));
+    randomDates.push(randomFormatedDate);
   }
 
-  return datasAleatorias;
+  return randomDates;
 }
 
 const generateStartHour = (config, amount) => {
@@ -107,4 +108,12 @@ const generateEndHour = (config, amount) => {
   }
 
   return randomDates;
+}
+
+const formatDate = (date) => {
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear().toString().slice(-2);
+
+  return `${day}/${month}/${year}`;
 }
