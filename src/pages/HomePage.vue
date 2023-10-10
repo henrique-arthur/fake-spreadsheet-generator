@@ -1,20 +1,26 @@
 <template>
-  <div>
+  <main>
     <header>
-      <h1>Gerador de planilhas</h1>
-      <label for="spreadSheetLength">Quantidade de linhas</label>
-      <input
-        v-model="spreadSheetLength"
-        id="spreadSheetLength"
-        type="number"
-        name="numero de linhas"
-        min="1"
-        max="100000"
-      />
-      <button @click="handleAddColumn">Adicionar Coluna</button>
+      <div class="text__header">
+        <h1>Gerador de planilhas</h1>
+      </div>
+      <div class="button__header">
+        <div class="rows__length__selector">
+          <label for="spreadSheetLength">Quantidade de linhas</label>
+          <InputText
+            v-model="spreadSheetLength"
+            id="spreadSheetLength"
+            type="number"
+            name="numero de linhas"
+            min="1"
+            max="100000"
+          />
+        </div>
+        <Button label="Adicionar Coluna" @click="handleAddColumn" />
+      </div>
     </header>
 
-    <div>
+    <div class="content">
       <table>
         <tr>
           <th v-for="(column, index) in columns" :key="index">
@@ -25,108 +31,74 @@
               {{ column.header }}
             </span>
             <div class="column__options" v-else>
-              <select
-                name="type"
-                id="type"
-                placeholder="Tipo de dado fake"
-                v-model="headerSelectValue"
-              >
-                <option
-                  v-for="option in columnFakeDataOptions"
-                  :key="option.type"
-                  :value="option.type"
-                >
-                  {{ option.value }}
-                </option>
-              </select>
-
-              <input
+              <InputText
                 v-model="headerInputValue"
                 placeholder="Nome do cabeçalho"
-                @keyup.enter="
-                  saveColumnFakerInfo(
-                    headerInputValue,
-                    headerSelectValue,
-                    index
-                  )
-                "
+                @keyup.enter="startConfigurateColumn(headerInputValue, index)"
               />
-              <button
-                @click="
-                  saveColumnFakerInfo(
-                    headerInputValue,
-                    headerSelectValue,
-                    index
-                  )
-                "
-              >
-                salvar
-              </button>
+              <Button
+                label="Configurar coluna"
+                @click="startConfigurateColumn(headerInputValue, index)"
+              />
             </div>
           </th>
         </tr>
-        <tr v-for="item in [0, 1, 2, 3, 4]" :key="item">
-          <td v-for="(column, index) in columns" :key="index">
-            {{ `Coluna ${item} Linha ${index}` }}
+        <tr v-for="(column, rowsIndex) in columns" :key="rowsIndex">
+          <td
+            v-for="(sample, index) in column[rowsIndex]?.fake_sample || []"
+            :key="index"
+          >
+            {{ sample }}
           </td>
         </tr>
       </table>
 
-      <button @click="generateSpreadSheet(columns, spreadSheetLength)">
-        Gerar planilha
-      </button>
+      <div class="content__footer">
+        <Button
+          label="Gerar planilha"
+          severity="success"
+          @click="generateSpreadSheet(columns, spreadSheetLength)"
+        />
+      </div>
 
-      <pre>{{ columns }}</pre>
+      <pre>
+        {{ columns }}
+      </pre>
     </div>
-  </div>
+
+    <ColumnOptionModal
+      :visible="isOptionModalVisible"
+      @update:visible="isOptionModalVisible = false"
+      @save:column-configuration="saveColumnConfiguration"
+    />
+  </main>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from "vue";
+import Button from "primevue/button";
+import { useToast } from "primevue/usetoast";
+import InputText from "primevue/inputtext";
 import { generateSpreadSheet } from "../actions/generateSpreadSheet";
+import ColumnOptionModal from "../components/ColumnOptionsModal/ColumnOptionsModal.vue";
+import { generateFakeColumn } from "../actions/generateFakeData";
+
+const toast = useToast();
 
 const columns = reactive([]);
 
+const AMOUNT_OF_SAMPLE_COLUMNS = 10;
 const headerInputValue = ref("");
-const headerSelectValue = ref("text");
 const spreadSheetLength = ref(10);
-
-const columnFakeDataOptions = [
-  {
-    type: "text",
-    value: "Texto",
-  },
-  {
-    type: "predefined_itens",
-    value: "Valores predefinidos(ids)",
-  },
-  {
-    type: "number",
-    value: "Número",
-  },
-  {
-    type: "date",
-    value: "Data",
-  },
-  {
-    type: "timezone",
-    value: "Timezone",
-  },
-  {
-    type: "start_hour",
-    value: "Hora de início",
-  },
-  {
-    type: "end_hour",
-    value: "Hora de término",
-  },
-];
+const isOptionModalVisible = ref(false);
+const modalOpenedForColumnIndex = ref(null);
 
 const handleAddColumn = () => {
   columns.push({
     header: "Nova coluna",
-    randomDataType: "text",
-    fake: ["nada"],
+    fake_type: "text",
+    fake_sample: [],
+    fake_config: {},
     config: {
       hideInput: false,
     },
@@ -138,12 +110,34 @@ const handleShowHeaderInput = (index) => {
   headerInputValue.value = columns[index].header;
 };
 
-const saveColumnFakerInfo = (data, dataType, index) => {
-  columns[index].header = data;
-  columns[index].randomDataType = dataType;
+const startConfigurateColumn = (headerText, index) => {
+  columns[index].header = headerText;
   columns[index].config.hideInput = true;
+  modalOpenedForColumnIndex.value = index;
+  isOptionModalVisible.value = true;
+};
+
+const saveColumnConfiguration = (columnConfiguration) => {
+  const atualEditingColumnIndex = modalOpenedForColumnIndex.value;
+  columns[atualEditingColumnIndex].fake_type = columnConfiguration.type;
+  columns[atualEditingColumnIndex].fake_config = columnConfiguration.recipe;
+
+  isOptionModalVisible.value = false;
+
+  columns[atualEditingColumnIndex].fake_sample = generateFakeColumn(
+    columns[atualEditingColumnIndex],
+    AMOUNT_OF_SAMPLE_COLUMNS
+  );
+
+  toast.add({
+    severity: "info",
+    summary: "Coluna configurada com sucessso",
+    detail: "Configurações da coluna salvas com sucesso",
+    life: 3000,
+  });
 
   localStorage.setItem("columns", JSON.stringify(columns));
+  modalOpenedForColumnIndex.value = null;
 };
 
 onMounted(() => {
@@ -155,7 +149,34 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+main {
+  header,
+  .content {
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+header {
+  margin-bottom: 1rem;
+  .text__header {
+    text-align: center;
+  }
+
+  .button__header {
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+.content__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
