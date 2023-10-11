@@ -58,10 +58,6 @@
           @click="generateSpreadSheet(columns, spreadSheetLength)"
         />
       </div>
-
-      <pre>
-        {{ columns }}
-      </pre>
     </div>
 
     <ColumnOptionModal
