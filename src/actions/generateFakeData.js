@@ -33,12 +33,12 @@ const generatePredefined = (config, amount) => {
     if (onlyOnePerLine) {
       result.push(items[Math.floor(Math.random() * items.length)])
     } else {
-      const randomAmount = Math.floor(Math.random() * items.length)
+      const randomAmount = Math.floor(Math.random() * items.length) || 1
       const randomItems = []
       for (let j = 0; j < randomAmount; j++) {
         randomItems.push(items[Math.floor(Math.random() * items.length)])
       }
-      result.push([...randomItems])
+      result.push(randomItems.join(","))
     }
   }
   return result
@@ -72,8 +72,8 @@ const generateDate = (config, amount) => {
 const generateStartHour = (config, amount) => {
   const { startHour } = config
   // Obtém os valores de hora em milissegundos para as datas fornecidas
-  const startHourToCalculate = startHour.startPeriod.getTime();
-  const endHourToCalculate = startHour.endPeriod.getTime();
+  const startHourToCalculate = new Date(startHour.startPeriod).getTime();
+  const endHourToCalculate = new Date(startHour.endPeriod).getTime();
 
   const randomDates = [];
 
@@ -82,7 +82,7 @@ const generateStartHour = (config, amount) => {
     const randomHour = Math.random() * (endHourToCalculate - startHourToCalculate) + startHourToCalculate;
 
     // Crie um novo objeto Date com a hora aleatória gerada
-    randomDates.push(new Date(randomHour));
+    randomDates.push(formatTime(new Date(randomHour)));
   }
 
   return randomDates;
@@ -91,8 +91,8 @@ const generateStartHour = (config, amount) => {
 const generateEndHour = (config, amount) => {
   const { endHour, startHoursArray } = config
   // Obtém os valores de hora em milissegundos para as datas fornecidas
-  const startHourToCalculate = endHour.startPeriod.getTime();
-  const endHourToCalculate = endHour.endPeriod.getTime();
+  const startHourToCalculate = new Date(endHour.startPeriod).getTime();
+  const endHourToCalculate = new Date(endHour.endPeriod).getTime();
 
   const randomDates = [];
 
@@ -104,7 +104,7 @@ const generateEndHour = (config, amount) => {
     const sum = startHoursArray[i].getTime() + randomHour;
 
     // Crie um novo objeto Date com a hora aleatória gerada e somada
-    randomDates.push(new Date(sum));
+    randomDates.push(formatTime(new Date(sum)));
   }
 
   return randomDates;
@@ -117,3 +117,10 @@ const formatDate = (date) => {
 
   return `${day}/${month}/${year}`;
 }
+
+const formatTime = (date) => {
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+};

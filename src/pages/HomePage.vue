@@ -29,6 +29,7 @@
               v-if="column.config.hideInput"
             >
               {{ column.header }}
+              <button @click="deleteColumn(index)">excluir linha</button>
             </span>
             <div class="column__options" v-else>
               <InputText
@@ -43,12 +44,9 @@
             </div>
           </th>
         </tr>
-        <tr v-for="(column, rowsIndex) in columns" :key="rowsIndex">
-          <td
-            v-for="(sample, index) in column[rowsIndex]?.fake_sample || []"
-            :key="index"
-          >
-            {{ sample }}
+        <tr v-for="(column, rowsIndex) in sampleData" :key="rowsIndex">
+          <td v-for="(col, index) in Object.values(column)" :key="index">
+            {{ col }}
           </td>
         </tr>
       </table>
@@ -79,7 +77,10 @@ import { onMounted, reactive, ref } from "vue";
 import Button from "primevue/button";
 import { useToast } from "primevue/usetoast";
 import InputText from "primevue/inputtext";
-import { generateSpreadSheet } from "../actions/generateSpreadSheet";
+import {
+  generateSpreadSheet,
+  transformIntoArrayOfRows,
+} from "../actions/generateSpreadSheet";
 import ColumnOptionModal from "../components/ColumnOptionsModal/ColumnOptionsModal.vue";
 import { generateFakeColumn } from "../actions/generateFakeData";
 
@@ -89,6 +90,7 @@ const columns = reactive([]);
 
 const AMOUNT_OF_SAMPLE_COLUMNS = 10;
 const headerInputValue = ref("");
+const sampleData = ref([]);
 const spreadSheetLength = ref(10);
 const isOptionModalVisible = ref(false);
 const modalOpenedForColumnIndex = ref(null);
@@ -97,7 +99,6 @@ const handleAddColumn = () => {
   columns.push({
     header: "Nova coluna",
     fake_type: "text",
-    fake_sample: [],
     fake_config: {},
     config: {
       hideInput: false,
@@ -106,8 +107,39 @@ const handleAddColumn = () => {
 };
 
 const handleShowHeaderInput = (index) => {
+  if (!columns[index]) return;
+
   columns[index].config.hideInput = false;
   headerInputValue.value = columns[index].header;
+};
+
+const deleteColumn = (index) => {
+  columns.splice(index, 1);
+  updateLocalStorage();
+  generateSampleData();
+};
+
+const isValidConfig = (index) => {
+  if (columns[index].fake_type === "endHour") {
+    const alreadyHaveStartHourColumn = columns.some(
+      (column) => column.fake_type === "startHour"
+    );
+
+    if (!alreadyHaveStartHourColumn) {
+      toast.add({
+        severity: "warn",
+        summary: "Coluna de hora final",
+        detail:
+          "Você precisa ter uma coluna de hora inicial para poder configurar a coluna de hora final",
+        life: 3000,
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  return true;
 };
 
 const startConfigurateColumn = (headerText, index) => {
@@ -119,15 +151,15 @@ const startConfigurateColumn = (headerText, index) => {
 
 const saveColumnConfiguration = (columnConfiguration) => {
   const atualEditingColumnIndex = modalOpenedForColumnIndex.value;
+
+  if (!isValidConfig(atualEditingColumnIndex)) return;
+
   columns[atualEditingColumnIndex].fake_type = columnConfiguration.type;
   columns[atualEditingColumnIndex].fake_config = columnConfiguration.recipe;
 
   isOptionModalVisible.value = false;
 
-  columns[atualEditingColumnIndex].fake_sample = generateFakeColumn(
-    columns[atualEditingColumnIndex],
-    AMOUNT_OF_SAMPLE_COLUMNS
-  );
+  generateSampleData();
 
   toast.add({
     severity: "info",
@@ -136,8 +168,26 @@ const saveColumnConfiguration = (columnConfiguration) => {
     life: 3000,
   });
 
-  localStorage.setItem("columns", JSON.stringify(columns));
+  updateLocalStorage();
+
   modalOpenedForColumnIndex.value = null;
+};
+
+const updateLocalStorage = () => {
+  localStorage.setItem("columns", JSON.stringify(columns));
+};
+
+const generateSampleData = () => {
+  const header = [];
+  const randomRows = [];
+
+  columns.forEach((column) => {
+    randomRows.push(generateFakeColumn(column, AMOUNT_OF_SAMPLE_COLUMNS));
+    header.push(column.header);
+  });
+
+  sampleData.value = transformIntoArrayOfRows(randomRows, header);
+  console.log(sampleData.value);
 };
 
 onMounted(() => {
@@ -145,6 +195,7 @@ onMounted(() => {
 
   if (columnsFromLocalStorage) {
     columns.splice(0, columns.length, ...columnsFromLocalStorage);
+    generateSampleData();
   }
 });
 </script>

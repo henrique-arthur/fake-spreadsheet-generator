@@ -1,5 +1,5 @@
 import * as exporter from "xlsx"
-import { generateFakeColumn } from "./generateFakeData"
+import { generateFakeColumn, } from "./generateFakeData"
 
 export function generateSpreadSheet(columns, sheetLength) {
   const spreadSheetHeaders = []
@@ -11,7 +11,7 @@ export function generateSpreadSheet(columns, sheetLength) {
     spreadSheetHeaders.push(column.header)
   });
 
-  const spreadSheetRows = transformArray(randomRows, spreadSheetHeaders)
+  const spreadSheetRows = transformIntoArrayOfRows(randomRows, spreadSheetHeaders)
 
   console.log({ spreadSheetRows, spreadSheetHeaders })
 
@@ -26,14 +26,14 @@ export function generateSpreadSheet(columns, sheetLength) {
   exporter.utils.sheet_add_aoa(worksheet, [spreadSheetHeaders], { origin: "A1" });
 
   /* calculate column width */
-  // const max_width = columns.reduce((w, r) => Math.max(w, r.name.length), 10);
+  // const max_width = spreadSheetHeaders.reduce((w, r) => Math.max(w, r.name.length), 10);
   // worksheet["!cols"] = [{ wch: max_width }];
 
   /* create an XLSX file and try to save to Presidents.xlsx */
   exporter.writeFile(workbook, "importadora.xlsx", { compression: true });
 }
 
-function transformArray(arr, atributeNames) {
+export function transformIntoArrayOfRows(arr, atributeNames) {
   const result = [];
 
   if (arr.length === 0) {
