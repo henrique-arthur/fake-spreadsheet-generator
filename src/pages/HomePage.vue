@@ -29,7 +29,7 @@
               v-if="column.config.hideInput"
             >
               {{ column.header }}
-              <button @click="deleteColumn(index)">excluir linha</button>
+              <button @click="deleteColumn(index)">excluir coluna</button>
             </span>
             <div class="column__options" v-else>
               <InputText
